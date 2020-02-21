@@ -1,0 +1,142 @@
+<style>
+    body {
+        margin: 0;
+    }
+    .wrapper {
+        width: 100%;
+    }
+    header div, footer div {
+        margin: 30px 0;
+        height: 40vh;
+        background-color: purple;
+    }
+    main {
+        position: relative;
+        overflow: hidden;
+        margin: 30px 0;
+    }
+    aside, article {
+        height: 60vh;
+        width: 40vw;
+        background-color: orange;
+    }
+    article:not(:first-child) {
+        margin-top: 30px;
+    }
+    article:not(:last-child) {
+        margin-bottom: 30px;
+    }
+    section {
+        position: absolute;
+        top: 0;
+        right: 0;
+        height: 100%;
+        pointer-events: none;
+    }
+</style>
+
+<div class="wrapper">
+    <div class="content">
+        <header>
+            <div></div>
+            <div></div>
+            <div></div>
+        </header>
+        <main>
+            <aside></aside>
+            <section>
+                <article></article>
+                <article></article>
+                <article></article>
+                <article></article>
+                <article></article>
+                <article></article>
+            </section>
+        </main>
+        <footer>
+            <div></div>
+            <div></div>
+            <div></div>
+        </footer>
+    </div>
+</div>
+
+<script>
+    const wrapper = document.querySelector('.wrapper')
+    const content = document.querySelector('.content')
+    const section = document.querySelector('section')
+    const maxScroll = section.scrollHeight - section.parentElement.offsetHeight
+    document.body.style.height = (wrapper.scrollHeight + maxScroll) + 'px'
+
+    // body height: add maxScroll
+    // when exiting section into footer, wrapper has translateY(section scrollHeight)
+    // during scrolljacking, don't actually stop scrolling, just freeze over
+
+    
+    function jackScroll(scrollingUp = false) {
+        wrapper.style.overflowY = 'hidden'
+        wrapper.style.height = `${innerHeight}px`
+        wrapper.style.position = 'fixed'
+        wrapper.style.top = '0px'
+        
+        if(scrollingUp) {
+            wrapper.style.transform = ''
+            content.style.transform = `translateY(${-section.parentElement.offsetTop}px)`
+        } else {
+            content.style.transform = `translateY(${-scrollY}px)`
+        }
+    }
+
+    function unjackScroll(scrollingDown = false) {
+        wrapper.style.overflowY = ''
+        wrapper.style.height = ''
+        wrapper.style.position = ''
+        wrapper.style.top = ''
+        content.style.transform = ''
+        if(scrollingDown)
+            wrapper.style.transform = `translateY(${maxScroll}px)`
+    }
+
+    addEventListener('scroll', listener, {passive: true})
+
+    let requestAnimationFrameId
+    function listener (event) {
+        if(!requestAnimationFrameId) {
+            frame()
+            event.stopPropagation()
+        }
+    }
+
+    let stickyAt
+    let sectionY = 0
+    let isJacking = false
+    const offsetTop = section.parentElement.offsetTop
+    let lastScroll = 0
+    function frame() {
+        requestAnimationFrameId = requestAnimationFrame(() => {
+            const directionalOffset = lastScroll < scrollY ? section.parentElement.offsetHeight - innerHeight : 0
+            if(!isJacking && scrollY >= offsetTop + directionalOffset && scrollY <= offsetTop + directionalOffset + maxScroll) {
+                isJacking = true
+                stickyAt = lastScroll > scrollY ? 'bottom' : 'top'
+                jackScroll(lastScroll > scrollY)
+            } else if (isJacking && (scrollY < offsetTop + directionalOffset || scrollY > offsetTop + directionalOffset + maxScroll)) {
+                isJacking = false
+                unjackScroll(lastScroll < scrollY)
+            }
+            if(isJacking)
+                scrollSection()
+            lastScroll = scrollY
+            requestAnimationFrameId = undefined
+        })
+    }
+
+    function scrollSection() {
+        sectionY = scrollY - offsetTop
+        if (sectionY <= 0){
+            sectionY = 0
+        } else if (sectionY >= maxScroll) {
+            sectionY = maxScroll
+        }
+        section.style.transform = `translateY(-${sectionY}px)`
+    }
+</script>
