@@ -81,7 +81,7 @@
         
         if(scrollingUp) {
             wrapper.style.transform = ''
-            content.style.transform = `translateY(${-section.parentElement.offsetTop}px)`
+            content.style.transform = `translateY(${-scrollY + section.scrollHeight - section.parentElement.offsetHeight}px)`
         } else {
             content.style.transform = `translateY(${-scrollY}px)`
         }
@@ -108,10 +108,9 @@
     }
 
     let stickyAt
-    let sectionY = 0
     let isJacking = false
     const offsetTop = section.parentElement.offsetTop
-    let lastScroll = 0
+    let lastScroll = scrollY
     function frame() {
         requestAnimationFrameId = requestAnimationFrame(() => {
             const directionalOffset = lastScroll < scrollY ? section.parentElement.offsetHeight - innerHeight : 0
@@ -119,24 +118,20 @@
                 isJacking = true
                 stickyAt = lastScroll > scrollY ? 'bottom' : 'top'
                 jackScroll(lastScroll > scrollY)
-            } else if (isJacking && (scrollY < offsetTop + directionalOffset || scrollY > offsetTop + directionalOffset + maxScroll)) {
-                isJacking = false
-                unjackScroll(lastScroll < scrollY)
             }
             if(isJacking)
                 scrollSection()
+            if (isJacking && (scrollY < offsetTop + directionalOffset || scrollY > offsetTop + maxScroll)) {
+                isJacking = false
+                unjackScroll(lastScroll < scrollY)
+            }
             lastScroll = scrollY
             requestAnimationFrameId = undefined
         })
     }
 
     function scrollSection() {
-        sectionY = scrollY - offsetTop
-        if (sectionY <= 0){
-            sectionY = 0
-        } else if (sectionY >= maxScroll) {
-            sectionY = maxScroll
-        }
+        const sectionY = Math.max(Math.min(scrollY - offsetTop, maxScroll), 0)
         section.style.transform = `translateY(-${sectionY}px)`
     }
 </script>
