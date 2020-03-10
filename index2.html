@@ -1,0 +1,147 @@
+<style>
+    body {
+        margin: 0;
+    }
+    .wrapper {
+        width: 100%;
+    }
+    header div, footer div {
+        margin: 30px 0;
+        height: 40vh;
+        background-color: purple;
+    }
+    main {
+        position: relative;
+        overflow-y: hidden;
+        margin: 30px 0;
+    }
+    aside, article {
+        height: 60vh;
+        width: calc(50vw - 15px);
+        background-color: orange;
+    }
+    article:not(:first-child) {
+        margin-top: 30px;
+    }
+    article:not(:last-child) {
+        margin-bottom: 30px;
+    }
+    section {
+        position: absolute;
+        top: 0;
+        right: 0;
+        height: 100%;
+        transition: transform .1s linear;
+    }
+    *:focus {
+        background-color: pink;
+    }
+</style>
+
+<div class="wrapper">
+    <header>
+        <div tabindex="0"></div >
+        <div tabindex="0"></div >
+        <div tabindex="0"></div >
+    </header>
+    <main>
+        <aside tabindex="0"></aside>
+        <section>
+            <article tabindex="0"></article>
+            <article tabindex="0"></article>
+            <article tabindex="0"></article>
+            <article tabindex="0"></article>
+            <article tabindex="0"></article>
+            <article tabindex="0"></article>
+        </section>
+    </main>
+    <footer>
+        <div tabindex="0"></div>
+        <div tabindex="0"></div>
+        <div tabindex="0"></div>
+    </footer>
+</div>
+
+<script>
+    const wrapper = document.querySelector('.wrapper')
+    const section = document.querySelector('section')
+
+    // how much scroll does the `overflow-y: hidden` element add to the page
+    const maxScroll = section.scrollHeight - section.parentElement.offsetHeight
+
+    // inflate body height so that scroll can be continuous
+    document.body.style.height = (document.body.scrollHeight + maxScroll) + 'px'
+
+
+    // Position entire page (`.wrapper`) when hacking scroll and releasing scroll
+
+    let scrollDirectionWhenHacked // 'down' | 'up' => which direction was scroll going when `hackScroll` was called
+    let scrollYOnHack // window.scrollY when `hackScroll` was called
+
+    function hackScroll(scrollingUp = false) {
+        wrapper.style.position = 'fixed'
+        wrapper.style.top = '0px'
+        
+        if(scrollingUp) {
+            wrapper.style.transform = `translateY(${-scrollY + section.scrollHeight - section.parentElement.offsetHeight}px)`
+        } else {
+            wrapper.style.transform = `translateY(${-scrollY}px)`
+        }
+    }
+
+    function releaseScroll(scrollingUp = false) {
+        wrapper.style.position = ''
+        wrapper.style.top = ''
+
+        if(scrollingUp) {
+            // nothing: this should restore initial state
+        } else {
+            wrapper.style.transform = `translateY(${maxScroll - (scrollYOnHack - offsetTop)}px)`
+        }
+    }
+
+    // Handle scroll event: OK
+    let requestAnimationFrameId
+    addEventListener('scroll', listener, {passive: true})
+    function listener (event) {
+        if(!requestAnimationFrameId) {
+            frame()
+            event.stopPropagation()
+        }
+    }
+
+    // When to start hacking scroll: OK
+    let isHacking = false
+    const offsetTop = getOffsetTop(section.parentElement) // total Y offset between `overflow-y: hidden` div and top of page
+    let lastScroll = scrollY
+    function frame() {
+        requestAnimationFrameId = requestAnimationFrame(() => {
+            const directionalOffset = lastScroll < scrollY ? section.parentElement.offsetHeight - innerHeight : 0
+            if(!isHacking && scrollY >= offsetTop + directionalOffset && scrollY <= offsetTop + directionalOffset + maxScroll) {
+                isHacking = true
+                scrollDirectionWhenHacked = lastScroll > scrollY ? 'down' : 'up'
+                scrollYOnHack = scrollY
+                hackScroll(lastScroll > scrollY)
+            }
+            if(isHacking)
+                scrollSection()
+            if (isHacking && (scrollY < offsetTop + directionalOffset || scrollY > offsetTop + maxScroll)) {
+                isHacking = false
+                releaseScroll(lastScroll > scrollY)
+            }
+            lastScroll = scrollY
+            requestAnimationFrameId = undefined
+        })
+    }
+
+    function scrollSection() {
+        const sectionY = Math.max(Math.min(scrollY - offsetTop, maxScroll), 0)
+        section.style.transform = `translateY(-${sectionY}px)`
+    }
+
+    function getOffsetTop(element, offset = 0) {
+        if(element.offsetParent)
+            return this.getOffsetTop(element.offsetParent, offset + element.offsetTop)
+        return offset
+    }
+</script>
