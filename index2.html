@@ -1,176 +1,170 @@
 <style>
-    * {
-        box-sizing: border-box;
-    }
+	* {
+		box-sizing: border-box;
+	}
 
-    body {
-        margin: 0;
-    }
+	body {
+		margin: 0;
+	}
 
-    .wrapper {
-        overflow-y: hidden;
-    }
+	.wrapper {
+		overflow-y: hidden;
+	}
 
-    .content {
-        width: 100%;
-    }
+	.content {
+		width: 100%;
+	}
 
-    header div,
-    footer div {
-        margin: 30px 0;
-        height: 40vh;
-        background-color: purple;
-    }
+	header div,
+	footer div {
+		margin: 30px 0;
+		height: 400px;
+		background-color: purple;
+	}
 
-    main {
-        position: relative;
-        overflow-y: hidden;
-        margin: 30px 0;
-    }
+	main {
+		position: relative;
+		overflow-y: hidden;
+		margin: 30px 0;
+	}
 
-    aside,
-    article {
-        height: 60vh;
-        width: calc(50vw - 15px);
-        background-color: orange;
-    }
+	aside,
+	article {
+		height: 60vh;
+		width: calc(50vw - 15px);
+		background-color: orange;
+	}
 
-    article:not(:first-child) {
-        margin-top: 30px;
-    }
+	article:not(:first-child) {
+		margin-top: 30px;
+	}
 
-    article:not(:last-child) {
-        margin-bottom: 30px;
-    }
+	article:not(:last-child) {
+		margin-bottom: 30px;
+	}
 
-    section {
-        position: absolute;
-        top: 0;
-        right: 0;
-        height: 100%;
-        transition: transform .1s linear;
-    }
+	section {
+		position: absolute;
+		top: 0;
+		right: 0;
+		height: 100%;
+		transition: transform .1s linear;
+	}
 
-    *:focus {
-        background-color: pink;
-    }
+	*:focus {
+		background-color: pink;
+	}
 </style>
 
 <div class="wrapper">
-    <div class="content">
-        <header>
-            <div tabindex="0"></div>
-            <div tabindex="0"></div>
-            <div tabindex="0"></div>
-        </header>
-        <main>
-            <aside tabindex="0"></aside>
-            <section>
-                <article tabindex="0"></article>
-                <article tabindex="0"></article>
-                <article tabindex="0"></article>
-                <article tabindex="0"></article>
-                <article tabindex="0"></article>
-                <article tabindex="0"></article>
-            </section>
-        </main>
-        <footer>
-            <div tabindex="0"></div>
-            <div tabindex="0"></div>
-            <div tabindex="0"></div>
-        </footer>
-    </div>
+	<div class="content">
+		<header>
+			<div tabindex="0"></div>
+			<div tabindex="0"></div>
+			<div tabindex="0"></div>
+		</header>
+		<main>
+			<aside tabindex="0"></aside>
+			<section>
+				<article tabindex="0"></article>
+				<article tabindex="0"></article>
+				<article tabindex="0"></article>
+				<article tabindex="0"></article>
+				<article tabindex="0"></article>
+				<article tabindex="0"></article>
+			</section>
+		</main>
+		<footer>
+			<div tabindex="0"></div>
+			<div tabindex="0"></div>
+			<div tabindex="0"></div>
+		</footer>
+	</div>
 </div>
 
 <script>
-    const wrapper = document.querySelector('.wrapper')
-    const content = document.querySelector('.content')
-    const section = document.querySelector('section')
-    const PADDING = 30 // scroll height before triggering scroll hacking
+	const wrapper = document.querySelector('.wrapper')
+	const content = document.querySelector('.content')
+	const section = document.querySelector('section')
+	const PADDING = 30 // scroll height before triggering scroll hacking
 
-    // how much scroll does the `overflow-y: hidden` element add to the page
-    const maxScroll = section.scrollHeight - section.offsetHeight
+	let sectionIsBelow = true
+	const sectionHeight = section.offsetHeight
+	const scrollAddedBySection = section.scrollHeight - sectionHeight
+	const scrollAboveSection = getOffsetTop(section.parentElement) // total Y offset between `overflow-y: hidden` div and top of page
 
-    // inflate body height so that scroll can be continuous
-    wrapper.style.height = (document.body.scrollHeight + maxScroll) + 'px'
+	// inflate body height so that scroll can be continuous
+	wrapper.style.height = (document.body.scrollHeight + scrollAddedBySection) + 'px'
 
+	// When to start hacking scroll: OK
+	
+	let isHacking = false
+	let lastScroll = scrollY
+	function frame() {
+		requestAnimationFrameId = requestAnimationFrame(() => {
+			
+			const scrollingDownwards = lastScroll <= scrollY
 
-    // Position entire page (`.wrapper`) when hacking scroll and releasing scroll
+			if (!isHacking) {
+				if(sectionIsBelow && scrollingDownwards && scrollY >= scrollAboveSection - (innerHeight - sectionHeight)) {
+					// exited from top, re-entered from top
+					content.style.position = 'fixed'
+					content.style.top = '0px'
+					content.style.transform = `translateY(${-scrollY}px)`
+					isHacking = true
+				} else if (!sectionIsBelow && !scrollingDownwards && scrollY < scrollAboveSection + scrollAddedBySection) {
+					// exited from bottom, re-entered from bottom
+					content.style.position = 'fixed'
+					content.style.top = '0px'
+					content.style.transform = `translateY(${-content.getBoundingClientRect().top}px)`
+					isHacking = true
+				}
+			}
+			
+			if (isHacking)
+				scrollSection()
+			
+			if (isHacking) {
+				if(sectionIsBelow && scrollingDownwards && scrollY >= scrollAboveSection - (innerHeight - sectionHeight) + scrollAddedBySection) {
+					// entered from top, exited from bottom
+					content.style.position = ''
+					content.style.top = ''
+					content.style.transform = `translateY(${scrollAddedBySection}px)`
+					isHacking = false
+					sectionIsBelow = false
+				} else if (sectionIsBelow && !scrollingDownwards && scrollY < scrollAboveSection - (innerHeight - sectionHeight)) {
+					// entered from top, exited from top
+					content.style.position = ''
+					content.style.top = ''
+					content.style.transform = ''
+					isHacking = false
+				}
+			}
+			
+			lastScroll = scrollY
+			requestAnimationFrameId = undefined
+		})
+	}
 
-    let scrollDirectionWhenHacked // 'down' | 'up' => which direction was scroll going when `hackScroll` was called
-    let scrollYOnHack // window.scrollY when `hackScroll` was called
+	// Handle scroll event: OK
+	let requestAnimationFrameId
+	addEventListener('scroll', listener, {passive: true})
+	function listener (event) {
+		if(!requestAnimationFrameId) {
+			frame()
+			event.stopPropagation()
+		}
+	}
+	frame()
 
-    function hackScroll(scrollingDown) {
-        content.style.position = 'fixed'
-        content.style.top = '0px'
+	function scrollSection() {
+		const sectionY = Math.max(Math.min(scrollY - scrollAboveSection, scrollAddedBySection), 0)
+		section.style.transform = `translateY(-${sectionY}px)`
+	}
 
-        if (scrollingDown) {
-            content.style.transform = `translateY(${-scrollY}px)`
-        } else {
-            content.style.transform = `translateY(${-scrollY + section.scrollHeight - section.parentElement.offsetHeight}px)`
-        }
-    }
-
-    function releaseScroll(scrollingDown) {
-        content.style.position = ''
-        content.style.top = ''
-
-        if (scrollingDown) {
-            content.style.transform = `translateY(${maxScroll}px)`
-        } else {
-            // nothing: this should restore initial state
-            content.style.transform = ''
-        }
-    }
-
-    // Handle scroll event: OK
-    let requestAnimationFrameId
-    addEventListener('scroll', listener, {passive: true})
-    function listener (event) {
-        if(!requestAnimationFrameId) {
-            frame()
-            event.stopPropagation()
-        }
-    }
-
-    // When to start hacking scroll: OK
-    let isHacking = false
-    const offsetTop = getOffsetTop(section.parentElement) // total Y offset between `overflow-y: hidden` div and top of page
-    let lastScroll = scrollY
-    function frame() {
-        requestAnimationFrameId = requestAnimationFrame(() => {
-            
-            const scrollingDownwards = lastScroll < scrollY
-            const directionalOffset = scrollingDownwards ? section.parentElement.offsetHeight - innerHeight : 0
-
-            if (!isHacking && scrollY >= offsetTop + directionalOffset + PADDING && scrollY <= offsetTop + directionalOffset + PADDING + maxScroll) {
-                isHacking = true
-                scrollDirectionWhenHacked = scrollingDownwards ? 'down' : 'up'
-                scrollYOnHack = scrollY
-                hackScroll(scrollingDownwards)
-            }
-            
-            if (isHacking)
-                scrollSection()
-            
-            if (isHacking && (scrollY < offsetTop + directionalOffset || scrollY > offsetTop + maxScroll)) {
-                isHacking = false
-                releaseScroll(scrollingDownwards)
-            }
-            
-            lastScroll = scrollY
-            requestAnimationFrameId = undefined
-        })
-    }
-
-    function scrollSection() {
-        const sectionY = Math.max(Math.min(scrollY - offsetTop, maxScroll), 0)
-        section.style.transform = `translateY(-${sectionY}px)`
-    }
-
-    function getOffsetTop(element, offset = 0) {
-        if (element.offsetParent)
-            return this.getOffsetTop(element.offsetParent, offset + element.offsetTop)
-        return offset
-    }
+	function getOffsetTop(element, offset = 0) {
+		if (element.offsetParent)
+			return this.getOffsetTop(element.offsetParent, offset + element.offsetTop)
+		return offset
+	}
 </script>
